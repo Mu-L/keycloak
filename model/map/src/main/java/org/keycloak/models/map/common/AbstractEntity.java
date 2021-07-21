@@ -24,9 +24,4 @@ public interface AbstractEntity<K> {
 
     K getId();
 
-    /**
-     * Flag signalizing that any of the setters has been meaningfully used.
-     * @return
-     */
-    boolean isUpdated();
 }

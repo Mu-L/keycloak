@@ -62,6 +62,7 @@ import org.keycloak.services.util.CookieHelper;
 import org.keycloak.storage.UserStorageProvider;
 import org.keycloak.testsuite.components.TestProvider;
 import org.keycloak.testsuite.components.TestProviderFactory;
+import org.keycloak.testsuite.components.amphibian.TestAmphibianProvider;
 import org.keycloak.testsuite.events.TestEventsListenerProvider;
 import org.keycloak.testsuite.federation.DummyUserFederationProviderFactory;
 import org.keycloak.testsuite.forms.PassThroughAuthenticator;
@@ -108,6 +109,7 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.UUID;
 
 /**
  * @author <a href="mailto:sthorger@redhat.com">Stian Thorgersen</a>
@@ -194,7 +196,7 @@ public class TestingResourceProvider implements RealmResourceProvider {
     @Path("/revert-testing-infinispan-time-service")
     @Produces(MediaType.APPLICATION_JSON)
     public Response revertTestingInfinispanTimeService() {
-        InfinispanTestUtil.revertTimeService(session);
+        InfinispanTestUtil.revertTimeService();
         return Response.noContent().build();
     }
 
@@ -390,6 +392,7 @@ public class TestingResourceProvider implements RealmResourceProvider {
 
     private Event repToModel(EventRepresentation rep) {
         Event event = new Event();
+        event.setId(UUID.randomUUID().toString());
         event.setClientId(rep.getClientId());
         event.setDetails(rep.getDetails());
         event.setError(rep.getError());
@@ -535,6 +538,7 @@ public class TestingResourceProvider implements RealmResourceProvider {
 
     private AdminEvent repToModel(AdminEventRepresentation rep) {
         AdminEvent event = new AdminEvent();
+        event.setId(UUID.randomUUID().toString());
         event.setAuthDetails(repToModel(rep.getAuthDetails()));
         event.setError(rep.getError());
         event.setOperationType(OperationType.valueOf(rep.getOperationType()));
@@ -688,6 +692,20 @@ public class TestingResourceProvider implements RealmResourceProvider {
                         TestProvider p = (TestProvider) factory.create(session, componentModel);
                         return p.getDetails();
                         }));
+    }
+
+    @GET
+    @Path("/test-amphibian-component")
+    @Produces(MediaType.APPLICATION_JSON)
+    public Map<String, Map<String, Object>> getTestAmphibianComponentDetails() {
+        RealmModel realm = session.getContext().getRealm();
+        return realm.getComponentsStream(realm.getId(), TestAmphibianProvider.class.getName())
+                .collect(Collectors.toMap(
+                  ComponentModel::getName,
+                  componentModel -> {
+                      TestAmphibianProvider t = session.getComponentProvider(TestAmphibianProvider.class, componentModel.getId());
+                      return t == null ? null : t.getDetails();
+                  }));
     }
 
 
@@ -992,7 +1010,6 @@ public class TestingResourceProvider implements RealmResourceProvider {
                 .entity(builder.toString()).build();
 
     }
-
 
     private RealmModel getRealmByName(String realmName) {
         RealmProvider realmProvider = session.getProvider(RealmProvider.class);
